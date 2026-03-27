@@ -25,18 +25,13 @@ export default function CardStack({
   onEmpty,
   currentIndex,
 }: CardStackProps) {
-  const [items, setItems] = useState<SwipeItem[]>(initialItems)
+  const items = initialItems  // Use items directly from props
   const total = initialItems.length
 
   const handleSwipe = (direction: SwipeDirection) => {
     if (items.length === 0) return
     const topItem = items[0]
     onItemSwiped(topItem, direction)
-    setItems(prev => {
-      const next = prev.slice(1)
-      if (next.length === 0) onEmpty?.()
-      return next
-    })
   }
 
   const visible = items.slice(0, 3)

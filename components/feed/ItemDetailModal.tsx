@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { createPortal } from 'react-dom'
 import type { SwipeItem } from '@/types'
 
 interface Props {
@@ -31,7 +32,7 @@ export default function ItemDetailModal({ item, onClose, onSave }: Props) {
   const isEvent = item?.type === 'event'
   const ctaLabel = isEvent ? 'Купить билет →' : 'Перейти к товару →'
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {item && (
         <motion.div
@@ -39,24 +40,12 @@ export default function ItemDetailModal({ item, onClose, onSave }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          className="fixed inset-0 z-50"
         >
           {/* Backdrop */}
           <div 
             onClick={onClose}
-            style={{
-              flex: 1,
-              background: 'rgba(0,0,0,0.5)',
-            }}
+            className="fixed inset-0 bg-black/50 z-[99]"
           />
           
           {/* White sheet */}
@@ -66,12 +55,8 @@ export default function ItemDetailModal({ item, onClose, onSave }: Props) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 40 }}
-            style={{
-              height: '85vh',
-              background: '#FFFFFF',
-              borderRadius: '24px 24px 0 0',
-              overflowY: 'auto',
-            }}
+            style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}
+            className="fixed left-0 right-0 mx-auto w-full max-w-[430px] z-[100] bg-white rounded-t-2xl max-h-[calc(85vh-64px)] overflow-y-auto"
           >
             {/* Drag handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
@@ -79,7 +64,7 @@ export default function ItemDetailModal({ item, onClose, onSave }: Props) {
             </div>
 
             {/* Scrollable content */}
-            <div style={{ overflowY: 'auto', flex: 1 }}>
+            <div className="overflow-y-auto flex-1">
               {/* Hero image */}
               <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#F7F7F5' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -237,6 +222,7 @@ export default function ItemDetailModal({ item, onClose, onSave }: Props) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

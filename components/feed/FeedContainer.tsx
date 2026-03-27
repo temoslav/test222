@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CardStack from '@/components/feed/CardStack'
 import ItemDetailModal from '@/components/feed/ItemDetailModal'
@@ -54,10 +54,40 @@ export default function FeedContainer({ initialItems }: Props) {
   const [activeCategories, setActiveCategories] = useState<string[]>([])
   const [items, setItems] = useState<SwipeItem[]>(initialItems)
   const [hearts, setHearts] = useState<{id: string, x: number, y: number}[]>([])
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const lastInteractionRef = useRef<string>('')
+
+  const loadMore = useCallback(async () => {
+    if (isLoading || !hasMore) return
+    setIsLoading(true)
+    const nextOffset = (page + 1) * 20
+    const res = await fetch(`/api/recommendations?limit=20&offset=${nextOffset}`)
+    const json = await res.json()
+    // API returns either { data: [...] } or a bare array — handle both:
+    const newItems = Array.isArray(json) ? json : (json.data ?? [])
+    if (!newItems.length) {
+      setHasMore(false)
+      setIsLoading(false)
+      return
+    }
+    setItems(prev => [...prev, ...newItems])
+    setPage(p => p + 1)
+    setIsLoading(false)
+  }, [isLoading, hasMore, page, items.length])
 
   const handleItemSwiped = async (item: SwipeItem, direction: SwipeDirection) => {
     const action = direction === 'right' ? 'swipe_right' : 'swipe_left'
+    const key = `${item.id}-${action}`
+    if (lastInteractionRef.current === key) return
+    lastInteractionRef.current = key
+    setTimeout(() => { lastInteractionRef.current = '' }, 1000)
+    
     logInteraction(item.id, action)
+    
+    // Remove the swiped item from the items list
+    setItems(prev => prev.filter(i => i.id !== item.id))
     
     // Add to wishlist on right swipe
     if (direction === 'right') {
@@ -88,13 +118,29 @@ export default function FeedContainer({ initialItems }: Props) {
   }
 
   const handleSave = (item: SwipeItem) => {
+    const key = `${item.id}-save`
+    if (lastInteractionRef.current === key) return
+    lastInteractionRef.current = key
+    setTimeout(() => { lastInteractionRef.current = '' }, 1000)
+    
     logInteraction(item.id, 'save')
   }
 
   const handleOpenDetail = (item: SwipeItem) => {
+    const key = `${item.id}-view_detail`
+    if (lastInteractionRef.current === key) return
+    lastInteractionRef.current = key
+    setTimeout(() => { lastInteractionRef.current = '' }, 1000)
+    
     logInteraction(item.id, 'view_detail')
     setDetailItem(item)
   }
+
+  useEffect(() => {
+    if (items.length <= 5 && hasMore && !isLoading) {
+      loadMore()
+    }
+  }, [items.length, hasMore, isLoading, loadMore])
 
   const toggleCategory = (cat: string) => {
     setActiveCategories(prev =>
